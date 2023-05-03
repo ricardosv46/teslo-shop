@@ -135,24 +135,4 @@ const RegisterPage = () => {
   )
 }
 
-export const getServerSideProps: GetServerSideProps = async ({ req, query }) => {
-  const session = await getSession({ req })
-  // console.log({session});
-
-  const { p = '/' } = query
-
-  if (session) {
-    return {
-      redirect: {
-        destination: p.toString(),
-        permanent: false
-      }
-    }
-  }
-
-  return {
-    props: {}
-  }
-}
-
 export default RegisterPage

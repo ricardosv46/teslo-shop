@@ -182,15 +182,6 @@ export const getServerSideProps: GetServerSideProps = async ({ req, query }) => 
   const { id = '' } = query
   const session: any = await getSession({ req })
 
-  if (!session) {
-    return {
-      redirect: {
-        destination: `/auth/login?p=/orders/${id}`,
-        permanent: false
-      }
-    }
-  }
-
   const order = await dbOrders.getOrderById(id.toString())
 
   if (!order) {
