@@ -34,7 +34,7 @@ const getOrderById = async (req: NextApiRequest, res: NextApiResponse<Data>) => 
         return res.status(401).json({message: 'Debe de estar autenticado para hacer esto'});
     }
 
-    const { id } = req.query ;
+    const { id } = req.query;
 
     // Crear un arreglo con los productos que la persona quiere
 

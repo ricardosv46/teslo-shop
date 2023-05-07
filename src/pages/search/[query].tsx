@@ -2,19 +2,24 @@ import type { NextPage, GetServerSideProps } from 'next'
 import { Typography, Box } from '@mui/material'
 
 import { ShopLayout } from '@components/layout'
-
+import useSWR from 'swr'
 import { ProductList } from '@components/products'
 
 import { dbProducts } from '@database'
 import { IProduct } from '@interfaces'
+import { useRouter } from 'next/router'
 
-interface Props {
+interface IProps {
   products: IProduct[]
   foundProducts: boolean
   query: string
 }
 
-const SearchPage: NextPage<Props> = ({ products, foundProducts, query }) => {
+const SearchPage: NextPage = () => {
+  const router = useRouter()
+  const { query: slug } = router.query
+  const { data, isLoading } = useSWR<IProps>(`/api/search/${slug}`)
+
   return (
     <ShopLayout
       title={'Teslo-Shop - Search'}
@@ -23,9 +28,9 @@ const SearchPage: NextPage<Props> = ({ products, foundProducts, query }) => {
         Buscar productos
       </Typography>
 
-      {foundProducts ? (
+      {data?.foundProducts ? (
         <Typography variant="h2" sx={{ mb: 1 }} textTransform="capitalize">
-          Término: {query}
+          Término: {data?.query}
         </Typography>
       ) : (
         <Box display="flex">
@@ -33,47 +38,17 @@ const SearchPage: NextPage<Props> = ({ products, foundProducts, query }) => {
             No encontramos ningún produto
           </Typography>
           <Typography variant="h2" sx={{ ml: 1 }} color="secondary" textTransform="capitalize">
-            {query}
+            {data?.query}
           </Typography>
         </Box>
       )}
 
-      <ProductList products={products} />
+      <ProductList products={data?.products!} />
     </ShopLayout>
   )
 }
 
 // You should use getServerSideProps when:
 // - Only if you need to pre-render a page whose data must be fetched at request time
-export const getServerSideProps: GetServerSideProps = async ({ params }) => {
-  const { query = '' } = params as { query: string }
-
-  if (query.length === 0) {
-    return {
-      redirect: {
-        destination: '/',
-        permanent: true
-      }
-    }
-  }
-
-  // y no hay productos
-  let products = await dbProducts.getProductsByTerm(query)
-  const foundProducts = products.length > 0
-
-  // TODO: retornar otros productos
-  if (!foundProducts) {
-    // products = await dbProducts.getAllProducts();
-    products = await dbProducts.getProductsByTerm('shirt')
-  }
-
-  return {
-    props: {
-      products,
-      foundProducts,
-      query
-    }
-  }
-}
 
 export default SearchPage

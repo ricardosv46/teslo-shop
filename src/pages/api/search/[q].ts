@@ -1,11 +1,11 @@
-import { db } from '@database';
+import { db, dbProducts } from '@database';
 import { IProduct } from '@interfaces';
 import { Product } from '@models';
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 type Data = 
 | { message: string }
-| IProduct[]
+|{products: IProduct[],foundProducts:boolean,query:string};
 
 export default function handler(req: NextApiRequest, res: NextApiResponse<Data>) {
 
@@ -20,33 +20,30 @@ export default function handler(req: NextApiRequest, res: NextApiResponse<Data>)
             });
     }
 
-    
 }
 
 const searchProducts = async(req: NextApiRequest, res: NextApiResponse<Data>) => {
     
     let { q = '' } = req.query;
 
-    if ( q.length === 0 ) {
-        return res.status(400).json({
-            message: 'Debe de especificar el query de búsqueda'
+    await db.connect();
+    let products = await dbProducts.getProductsByTerm(q!.toString())
+    const foundProducts = products.length > 0
+
+    if( !products ) {
+        return res.status(404).json({
+            message: 'Producto no encontrado'
         })
     }
 
-    q = q.toString().toLowerCase();
+  if (!foundProducts) {
+    // products = await dbProducts.getAllProducts();
+    products = await dbProducts.getProductsByTerm('shirt')
+  }
 
-    await db.connect();
-    const products = await Product.find({
-        $text: { $search: q }
-    })
-    .select('title images price inStock slug -_id')
-    .lean();
+  await db.disconnect();
 
 
-    await db.disconnect();
+  return res.json( { products, foundProducts, query:q?.toString() || '' } );
 
-
-
-
-    return res.status(200).json(products);
 }
