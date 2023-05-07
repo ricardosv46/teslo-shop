@@ -39,10 +39,10 @@ const OrderPage: NextPage<Props> = () => {
   const { data: order, isLoading } = useSWR<IOrder>(`/api/orders/${id}`)
 
   useEffect(() => {
-    if (order?.user !== dataUser?.user?._id) {
+    if (!isLoading && order?.user !== dataUser?.user?._id) {
       router.push('/orders/history')
     }
-  }, [isLoading])
+  }, [isLoading, order])
 
   if (isLoading || !order || order?.user !== dataUser?.user?._id) {
     return <></>

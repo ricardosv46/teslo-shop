@@ -40,7 +40,6 @@ const SummaryPage = () => {
   }, [isLoaded, router])
 
   const onCreateOrder = async () => {
-    console.log({ data, status })
     setIsPosting(true)
 
     const { hasError, message } = await createOrder()
