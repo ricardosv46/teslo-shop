@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GetServerSideProps, NextPage } from 'next'
-import { getSession } from 'next-auth/react'
+import { getSession, useSession } from 'next-auth/react'
 import { useRouter } from 'next/router'
 import { PayPalButtons } from '@paypal/react-paypal-js'
 
@@ -15,7 +15,7 @@ import {
   CircularProgress
 } from '@mui/material'
 import { CreditCardOffOutlined, CreditScoreOutlined } from '@mui/icons-material'
-
+import useSWR from 'swr'
 import { ShopLayout } from '@components/layout'
 import { CartList, OrderSummary } from '@components/cart'
 import { dbOrders } from '@database'
@@ -31,13 +31,26 @@ interface Props {
   order: IOrder
 }
 
-const OrderPage: NextPage<Props> = ({ order }) => {
-  const router = useRouter()
-  const { shippingAddress } = order
+const OrderPage: NextPage<Props> = () => {
   const [isPaying, setIsPaying] = useState(false)
+  const router = useRouter()
+  const { id } = router.query
+  const { data: dataUser } = useSession() as any
+  const { data: order, isLoading } = useSWR<IOrder>(`/api/orders/${id}`)
+
+  useEffect(() => {
+    if (order?.user !== dataUser?.user?._id) {
+      router.push('/orders/history')
+    }
+  }, [isLoading])
+
+  if (isLoading || !order || order?.user !== dataUser?.user?._id) {
+    return <></>
+  }
+
+  const { shippingAddress } = order
 
   const onOrderCompleted = async (details: OrderResponseBody) => {
-    console.log({ details })
     if (details.status !== 'COMPLETED') {
       return alert('No hay pago en Paypal')
     }
@@ -177,36 +190,5 @@ const OrderPage: NextPage<Props> = ({ order }) => {
 
 // You should use getServerSideProps when:
 // - Only if you need to pre-render a page whose data must be fetched at request time
-
-export const getServerSideProps: GetServerSideProps = async ({ req, query }) => {
-  const { id = '' } = query
-  const session: any = await getSession({ req })
-
-  const order = await dbOrders.getOrderById(id.toString())
-
-  if (!order) {
-    return {
-      redirect: {
-        destination: '/orders/history',
-        permanent: false
-      }
-    }
-  }
-
-  if (order.user !== session.user._id) {
-    return {
-      redirect: {
-        destination: '/orders/history',
-        permanent: false
-      }
-    }
-  }
-
-  return {
-    props: {
-      order
-    }
-  }
-}
 
 export default OrderPage

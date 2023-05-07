@@ -1,12 +1,10 @@
 import NextLink from 'next/link'
-import { GetServerSideProps, NextPage } from 'next'
-import { getSession } from 'next-auth/react'
-
+import { NextPage } from 'next'
+import { useSession } from 'next-auth/react'
 import { Typography, Grid, Chip, Link } from '@mui/material'
 import { DataGrid, GridColDef, GridRenderCellParams } from '@mui/x-data-grid'
-
+import useSWR from 'swr'
 import { ShopLayout } from '@components/layout'
-import { dbOrders } from '@database'
 import { IOrder } from '@interfaces'
 
 const columns: GridColDef[] = [
@@ -45,10 +43,14 @@ interface Props {
   orders: IOrder[]
 }
 
-const HistoryPage: NextPage<Props> = ({ orders }) => {
+const HistoryPage: NextPage<Props> = () => {
   // const rows = ..
   // { id: indice + 1, paid: true, fullname: 'Fernando Herrera', orderId: 1283781237123 }
-  const rows = orders.map((order, idx) => ({
+
+  const { data: dataUser } = useSession() as any
+  const { data: orders, error } = useSWR<IOrder[]>(`/api/orders/user/${dataUser?.user?._id}`)
+
+  const rows = orders?.map((order, idx) => ({
     id: idx + 1,
     paid: order.isPaid,
     fullname: `${order.shippingAddress.firstName} ${order.shippingAddress.lastName}`,
@@ -63,35 +65,22 @@ const HistoryPage: NextPage<Props> = ({ orders }) => {
 
       <Grid container className="fadeIn">
         <Grid item xs={12} sx={{ height: 650, width: '100%' }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            pageSizeOptions={[10]}
-            initialState={{
-              pagination: {
-                paginationModel: { pageSize: 10 }
-              }
-            }}
-          />
+          {rows && (
+            <DataGrid
+              rows={rows}
+              columns={columns}
+              pageSizeOptions={[10]}
+              initialState={{
+                pagination: {
+                  paginationModel: { pageSize: 10 }
+                }
+              }}
+            />
+          )}
         </Grid>
       </Grid>
     </ShopLayout>
   )
-}
-
-// You should use getServerSideProps when:
-// - Only if you need to pre-render a page whose data must be fetched at request time
-
-export const getServerSideProps: GetServerSideProps = async ({ req }) => {
-  const session: any = await getSession({ req })
-
-  const orders = await dbOrders.getOrdersByUser(session.user._id)
-
-  return {
-    props: {
-      orders
-    }
-  }
 }
 
 export default HistoryPage
